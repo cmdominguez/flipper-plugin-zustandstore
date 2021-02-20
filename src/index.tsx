@@ -16,9 +16,10 @@ import {
 } from "flipper";
 
 type Data = {
+  storeName?: string;
   state?: any;
   title?: string;
-  timestamp: string;
+  timestamp?: string;
 };
 
 type Events = {
@@ -26,8 +27,7 @@ type Events = {
 };
 
 export function plugin(client: PluginClient<Events, {}>) {
-  const data = createState<Array<Data>>([], { persist: "data" });
-
+  const data = createState<Array<Data>>([]);
   client.onMessage("newData", (newData) => {
     data.update((draft) => {
       draft.push(newData);
@@ -36,27 +36,33 @@ export function plugin(client: PluginClient<Events, {}>) {
   return { data };
 }
 
-function renderSidebar(row: Data, diff: Data | null) {
+function renderSidebar(
+  row: Data,
+  diff: Data | null
+) {
   return (
-    <Panel floating={false} heading={"State"}>
+    <Panel floating={false} heading={row.storeName || "Store"}>
       <ManagedDataInspector
-        data={row}
+        data={row.state}
         expandRoot={true}
-        diff={diff}
+        diff={diff?.state}
         collapsed
       />
     </Panel>
   );
 }
 
-
 const columnSizes = {
-  time: "20%",
-  action: "35%",
+  time: "30%",
+  storeName: "40%",
+  action: "30%",
 };
 const columns = {
   action: {
     value: "Action",
+  },
+  storeName: {
+    value: "Store Name",
   },
   time: {
     value: "Time",
@@ -68,7 +74,7 @@ const buildRow = (row: Data, i: any) => {
   // this line is a hack to stay compatible with Flipper <0.46
   copyText.toString = () => JSON.stringify(row);
   const { timestamp } = row;
-  const date = new Date(timestamp);
+  const date = new Date(timestamp || "");
   const time =
     date.getHours() +
     ":" +
@@ -87,6 +93,10 @@ const buildRow = (row: Data, i: any) => {
         value: <Text>{row.title}</Text>,
         filterValue: row.title,
       },
+      storeName: {
+        value: <Text>{row.storeName}</Text>,
+        filterValue: row.storeName,
+      },
     },
     key: i,
     copyText,
@@ -94,9 +104,19 @@ const buildRow = (row: Data, i: any) => {
   };
 };
 
+function buscador(data: Array<Data>, i: number) {
+  const selected = data[i];
+  for (let index = i-1; index >= 0; index--) {
+    const element = data[index];
+    if (element.storeName === selected.storeName) {
+      return element;
+    }
+  }
+  return null;
+}
+
 export function Component() {
   const instance = usePlugin(plugin);
-
   const data = useValue(instance.data);
   const [selected, setSelected] = useState<number>(0);
   const rows = data.map((v, i) => buildRow(v, i));
@@ -111,6 +131,7 @@ export function Component() {
           columnSizes={columnSizes}
           columns={columns}
           onRowHighlighted={(e: any) => {
+            buscador(data, e[0])  
             setSelected(e[0]);
           }}
           multiHighlight={false}
@@ -130,8 +151,8 @@ export function Component() {
       {data.length > 0 && (
         <DetailSidebar>
           {renderSidebar(
-            data[selected].state,
-            selected > 0 ? data[selected - 1].state : null
+            data[selected],
+            selected > 0 ? buscador(data, selected) : null
           )}
         </DetailSidebar>
       )}
