@@ -75,15 +75,12 @@ const buildRow = (row: Data, i: any) => {
   copyText.toString = () => JSON.stringify(row);
   const { timestamp } = row;
   const date = new Date(timestamp || "");
-  const time =
-    date.getHours() +
-    ":" +
-    date.getMinutes() +
-    ":" +
-    date.getSeconds() +
-    " " +
-    date.getMilliseconds() +
-    "ms";
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = `00${date.getMilliseconds()}`.slice(-3);
+
+  const time = `${hours}:${minutes}:${seconds}:${milliseconds}ms`;
   return {
     columns: {
       time: {
